@@ -5,8 +5,9 @@ Never attach the keystore or its passwords in a chat, Git commit, issue, pull re
 ## Upload from your own computer
 
 1. Keep an encrypted backup of the original keystore and credentials.
-2. On Windows with PowerShell 7+ and GitHub CLI, review the public script at scripts/Upload-BestShotSigningSecrets.ps1 and execute it locally from the checked-out repository.
-3. The script prompts for the path to the local key, alias, keystore password, and key password. It passes each value via standard input to gh secret set, without showing values in shell command arguments or logs.
+2. On Windows with PowerShell 7+ and authenticated GitHub CLI, review `scripts/Upload-BestShotSigningSecrets.ps1` and execute it locally. It may be downloaded directly into Downloads; cloning the repository is unnecessary.
+3. The script automatically finds `.jks`, `.keystore`, `.p12` and `.pfx` files beside itself and in Downloads. With one match it selects it automatically; with several it shows a numbered menu. If none are found, it accepts an explicit path. `-KeystorePath` can also override discovery.
+4. Enter the signing alias and hidden keystore password; for an identical key password, press Enter at the key-password prompt. The script passes encrypted GitHub Secrets via standard input to `gh secret set`, never exposing values in command arguments or logs.
 4. GitHub CLI encrypts secrets locally before sending them. Base64 is just a transfer encoding, not encryption.
 
 GitHub Actions Environment Secrets (environment: bestshot-android-signing, only main allowed):
