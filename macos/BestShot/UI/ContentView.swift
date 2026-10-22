@@ -208,30 +208,18 @@ struct ContentView: View {
         guard panel.runModal() == .OK, let directory = panel.url else { return }
         let folderAccess = directory.startAccessingSecurityScopedResource()
         defer { if folderAccess { directory.stopAccessingSecurityScopedResource() } }
-        var count = 0
-        for index in selected.sorted() {
-            let source = urls[index]
-            let sourceAccess = source.startAccessingSecurityScopedResource()
-            defer { if sourceAccess { source.stopAccessingSecurityScopedResource() } }
-            let ext = source.pathExtension
-            let stem = source.deletingPathExtension().lastPathComponent
-            var destination = directory.appendingPathComponent(source.lastPathComponent)
-            var suffix = 1
-            while FileManager.default.fileExists(atPath: destination.path) {
-                destination = directory.appendingPathComponent("\(stem)-\(suffix).\(ext)")
-                suffix += 1
-            }
-            do {
-                try FileManager.default.copyItem(at: source, to: destination)
-                count += 1
-            } catch {
-                alert = L.text("Экспортировано \(count). Ошибка: \(error.localizedDescription)",
-                               "Exported \(count). Error: \(error.localizedDescription)")
-                return
-            }
+        do {
+            let copies = try LosslessExporter.copy(selected.sorted().map { urls[$0] },
+                                                   into: directory)
+            alert = L.text("Экспортировано: \(copies.count). Оригиналы не изменены.",
+                           "Exported: \(copies.count). Originals unchanged.")
+        } catch let failure as ExportFailure {
+            alert = L.text("Экспортировано: \(failure.completed.count). Ошибка: \(failure.underlying.localizedDescription)",
+                           "Exported: \(failure.completed.count). Error: \(failure.underlying.localizedDescription)")
+        } catch {
+            alert = L.text("Ошибка экспорта: \(error.localizedDescription)",
+                           "Export error: \(error.localizedDescription)")
         }
-        alert = L.text("Экспортировано: \(count). Оригиналы не изменены.",
-                       "Exported: \(count). Originals unchanged.")
     }
 }
 

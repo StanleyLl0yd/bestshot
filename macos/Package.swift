@@ -6,6 +6,8 @@ let package = Package(
     products: [.library(name: "RankingCore", targets: ["RankingCore"])],
     targets: [
         .target(name: "RankingCore", path: "BestShot/Ranking"),
-        .testTarget(name: "RankingCoreTests", dependencies: ["RankingCore"], path: "Tests/RankingCoreTests")
+        .target(name: "PhotoCopyCore", path: "BestShot/Photos"),
+        .testTarget(name: "RankingCoreTests", dependencies: ["RankingCore"], path: "Tests/RankingCoreTests"),
+        .testTarget(name: "PhotoCopyCoreTests", dependencies: ["PhotoCopyCore"], path: "Tests/PhotoCopyCoreTests")
     ]
 )
