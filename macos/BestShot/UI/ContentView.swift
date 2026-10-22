@@ -70,11 +70,6 @@ struct ContentView: View {
                         }
                     }
                 }
-                let errors = results.filter { $0.error != nil }
-                if !errors.isEmpty {
-                    Text(L.text("Не обработано файлов: \(errors.count)", "Files skipped: \(errors.count)"))
-                        .foregroundStyle(.orange)
-                }
             } else {
                 Spacer()
                 ContentUnavailableView(L.text("Нет результатов", "No results"),
@@ -82,6 +77,21 @@ struct ContentView: View {
                     description: Text(L.text("Выберите серию, чтобы увидеть рекомендации.",
                                              "Choose a photo series to see recommendations.")))
                 Spacer()
+            }
+            let errors = results.filter { $0.error != nil }
+            if !errors.isEmpty {
+                DisclosureGroup(
+                    L.text("Проблемы с файлами: \(errors.count)", "File warnings: \(errors.count)")
+                ) {
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 4) {
+                            ForEach(errors, id: \.sourceIndex) { item in
+                                Text("\(item.url.lastPathComponent): \(item.error ?? "")")
+                                    .font(.caption).textSelection(.enabled)
+                            }
+                        }
+                    }.frame(maxHeight: 160)
+                }.foregroundStyle(.orange)
             }
         }
         .padding(20)

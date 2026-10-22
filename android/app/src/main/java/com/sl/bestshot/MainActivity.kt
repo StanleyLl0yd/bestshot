@@ -52,6 +52,7 @@ private fun BestShotScreen(vm: BestShotViewModel = viewModel()) {
         if (it != null) vm.export(it)
     }
     var compare by remember { mutableStateOf(false) }
+    var showWarnings by remember { mutableStateOf(false) }
     var compareLeft by remember { mutableIntStateOf(0) }
     var compareRight by remember { mutableIntStateOf(1) }
     var zoom by remember { mutableFloatStateOf(1f) }
@@ -59,6 +60,7 @@ private fun BestShotScreen(vm: BestShotViewModel = viewModel()) {
         compareLeft = 0
         compareRight = 1
         zoom = 1f
+        showWarnings = false
     }
     Column(Modifier.fillMaxSize().padding(16.dp)) {
         Text("BestShot", style = MaterialTheme.typography.headlineLarge)
@@ -79,6 +81,20 @@ private fun BestShotScreen(vm: BestShotViewModel = viewModel()) {
                 modifier = Modifier.fillMaxWidth())
             Text(state.progress.toString() + "/" + state.source.size)
         }
+        val warnings = state.results.filter { it.error != null }
+        if (warnings.isNotEmpty()) {
+            TextButton(onClick = { showWarnings = !showWarnings }) {
+                Text(tr("Проблемы с файлами: ", "File warnings: ") + warnings.size)
+            }
+            if (showWarnings) {
+                Column(Modifier.heightIn(max = 160.dp).verticalScroll(rememberScrollState())) {
+                    warnings.forEach { item ->
+                        Text("#" + (item.index + 1) + ": " + (item.error ?: ""),
+                             style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+            }
+        }
         if (state.ranking.isNotEmpty()) {
             Spacer(Modifier.height(12.dp))
             if (state.ranking.first().uncertain) {
@@ -94,8 +110,6 @@ private fun BestShotScreen(vm: BestShotViewModel = viewModel()) {
                     Text(tr("Экспорт", "Export"))
                 }
             }
-            val failed = state.results.count { it.error != null }
-            if (failed > 0) Text(tr("Файлов с предупреждениями: ", "Files with warnings: ") + failed)
             LazyVerticalGrid(columns = GridCells.Adaptive(150.dp),
                 contentPadding = PaddingValues(top = 12.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -168,13 +182,13 @@ private fun BestShotScreen(vm: BestShotViewModel = viewModel()) {
                             scaleX = zoom
                             scaleY = zoom
                             clip = true
-                        })
+                        }, maxEdge = if (zoom > 1.5f) 2000 else 1200)
                     PhotoPreview(state.source[state.ranking[compareRight].index],
                         Modifier.weight(1f).height(280.dp).graphicsLayer {
                             scaleX = zoom
                             scaleY = zoom
                             clip = true
-                        })
+                        }, maxEdge = if (zoom > 1.5f) 2000 else 1200)
                 }
                 Text(tr("Масштаб", "Zoom") + " " + (zoom * 100).toInt() + "%")
                 Slider(value = zoom, onValueChange = { zoom = it }, valueRange = 1f..3f)
@@ -185,9 +199,9 @@ private fun BestShotScreen(vm: BestShotViewModel = viewModel()) {
 }
 
 @Composable
-private fun PhotoPreview(uri: Uri, modifier: Modifier = Modifier) {
+private fun PhotoPreview(uri: Uri, modifier: Modifier = Modifier, maxEdge: Int = 700) {
     val context = LocalContext.current
-    val thumbnail by produceState<Bitmap?>(initialValue = null, uri) {
+    val thumbnail by produceState<Bitmap?>(initialValue = null, uri, maxEdge) {
         value = withContext(Dispatchers.IO) {
             runCatching {
                 // ImageDecoder handles JPEG/HEIF/PNG orientation on API 29+.
@@ -195,7 +209,7 @@ private fun PhotoPreview(uri: Uri, modifier: Modifier = Modifier) {
                 ImageDecoder.decodeBitmap(source) { decoder, info, _ ->
                     var sample = 1
                     val edge = maxOf(info.size.width, info.size.height)
-                    while (edge / sample > 700) sample *= 2
+                    while (edge / sample > maxEdge) sample *= 2
                     decoder.setTargetSampleSize(sample)
                     decoder.allocator = ImageDecoder.ALLOCATOR_SOFTWARE
                 }
