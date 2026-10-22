@@ -37,3 +37,11 @@ Using one existing keystore across several apps increases the impact of compromi
 For Google Play App Signing, an upload certificate may differ from the certificate Google uses to sign store-distributed APKs.
 
 No app publication or GitHub Release is authorized by this configuration. Real-device and AI-quality testing remain mandatory.
+
+## Inspecting the signed candidate
+
+Use GitHub Actions -> Android signed candidates -> the latest successful run -> Artifacts. Download the `bestshot-android-signed-<sha>` ZIP. It contains a signed APK, AAB, SHA-256 checksums and, from the next signed run onward, the **public SHA-256 signing certificate fingerprint only** (not the certificate subject/private key). The workflow verifies APK signing, AAB JAR signature, package ID and absence of INTERNET/broad gallery permissions before upload.
+
+On Windows with GitHub CLI, list runs with `gh run list -R StanleyLl0yd/bestshot --workflow android-signed.yml --branch main --limit 5` and download a selected one using `gh run download RUN_ID -R StanleyLl0yd/bestshot --dir "$HOME\\Downloads\\BestShot-candidate"`.
+
+A debug APK and a release-signed APK have different certificates, so installing the release candidate over an installed debug build may require uninstalling the debug build first. Preserve data you need before uninstalling. No RuStore or Google Play submission is part of this workflow.
