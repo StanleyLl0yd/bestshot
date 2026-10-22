@@ -44,9 +44,13 @@ class BestShotViewModel(app: Application) : AndroidViewModel(app) {
             return
         }
         val ticket = ++generation
-        job?.cancel()
+        val previous = job
+        previous?.cancel()
         mutable.value = ScreenState(source = unique, processing = true)
         job = viewModelScope.launch {
+            // Do not overlap large decoders/ML Kit tasks across rapid re-selections.
+            previous?.join()
+            if (ticket != generation) return@launch
             val output = mutableListOf<AnalyzedPhoto>()
             val analyzer = try {
                 ImageAnalyzer(getApplication())
