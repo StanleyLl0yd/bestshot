@@ -244,26 +244,58 @@ struct ContentView: View {
 private struct PreviewImage: View {
     let url: URL
     let size: CGFloat
-    private var thumbnail: CGImage? {
-        let scoped = url.startAccessingSecurityScopedResource()
-        defer { if scoped { url.stopAccessingSecurityScopedResource() } }
-        guard let source = CGImageSourceCreateWithURL(url as CFURL, nil) else { return nil }
-        return CGImageSourceCreateThumbnailAtIndex(source, 0, [
-            kCGImageSourceCreateThumbnailFromImageAlways: true,
-            kCGImageSourceCreateThumbnailWithTransform: true,
-            kCGImageSourceThumbnailMaxPixelSize: Int(size * 2)
-        ] as CFDictionary)
+    @State private var preview: NSImage?
+
+    private var cacheKey: String {
+        url.absoluteString + "|" + String(Int(size * 2))
     }
 
     var body: some View {
         Group {
-            if let thumbnail {
-                Image(decorative: thumbnail, scale: 1)
-                    .resizable().scaledToFit()
+            if let preview {
+                Image(nsImage: preview).resizable().scaledToFit()
             } else {
-                Image(systemName: "photo.badge.exclamationmark").resizable().scaledToFit()
+                Image(systemName: "photo.on.rectangle.angled")
+                    .resizable().scaledToFit().foregroundStyle(.secondary)
             }
-        }.frame(maxWidth: .infinity, minHeight: size, maxHeight: size)
+        }
+        .frame(maxWidth: .infinity, minHeight: size, maxHeight: size)
+        .task(id: cacheKey) {
+            // Image decoding used to happen synchronously inside body, and was
+            // repeated for every UI state change. Keep heavyweight work off-main.
+            preview = nil
+            let fileURL = url
+            let edge = max(1, Int(size * 2))
+            let worker = Task.detached(priority: .utility) { () -> Data? in
+                guard !Task.isCancelled else { return nil }
+                let scoped = fileURL.startAccessingSecurityScopedResource()
+                defer { if scoped { fileURL.stopAccessingSecurityScopedResource() } }
+                guard let source = CGImageSourceCreateWithURL(fileURL as CFURL, nil),
+                      let thumbnail = CGImageSourceCreateThumbnailAtIndex(source, 0, [
+                        kCGImageSourceCreateThumbnailFromImageAlways: true,
+                        kCGImageSourceCreateThumbnailWithTransform: true,
+                        kCGImageSourceThumbnailMaxPixelSize: edge
+                      ] as CFDictionary),
+                      !Task.isCancelled,
+                      let encoded = CFDataCreateMutable(kCFAllocatorDefault, 0),
+                      let destination = CGImageDestinationCreateWithData(
+                        encoded, UTType.png.identifier as CFString, 1, nil)
+                else { return nil }
+                CGImageDestinationAddImage(destination, thumbnail, nil)
+                guard CGImageDestinationFinalize(destination), !Task.isCancelled else {
+                    return nil
+                }
+                return encoded as Data
+            }
+            let data = await withTaskCancellationHandler {
+                await worker.value
+            } onCancel: {
+                worker.cancel()
+            }
+            if !Task.isCancelled, let data {
+                preview = NSImage(data: data)
+            }
+        }
     }
 }
 

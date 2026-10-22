@@ -103,8 +103,19 @@ jobs:
           test -s "$aab" && test -s "$apk"
           jarsigner -verify -verbose "$aab" > "$RUNNER_TEMP/aab-verification.txt"
           grep -q 'jar verified.' "$RUNNER_TEMP/aab-verification.txt"
-          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose "$apk" \
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$apk" \
             > "$RUNNER_TEMP/apk-verification.txt"
+          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$apk" \
+            | grep -Fq "name='com.sl.bestshot'"
+          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump permissions "$apk" \
+            > "$RUNNER_TEMP/apk-permissions.txt"
+          if grep -Eq 'android.permission.(INTERNET|READ_MEDIA_IMAGES)' "$RUNNER_TEMP/apk-permissions.txt"; then
+            echo "::error::Unexpected network or broad media permission"; exit 1
+          fi
+          digest="$(sed -n 's/^Signer #1 certificate SHA-256 digest: //p' "$RUNNER_TEMP/apk-verification.txt")"
+          test -n "$digest" || { echo "::error::Missing APK signing certificate"; exit 1; }
+          printf 'APK signing certificate SHA-256: %s\n' "$digest" \
+            > android/app/build/outputs/SIGNING-CERTIFICATE-SHA256.txt
           (
             cd android/app/build/outputs
             sha256sum bundle/release/app-release.aab apk/release/app-release.apk > SIGNED-SHA256SUMS.txt
@@ -117,5 +128,6 @@ jobs:
             android/app/build/outputs/bundle/release/app-release.aab
             android/app/build/outputs/apk/release/app-release.apk
             android/app/build/outputs/SIGNED-SHA256SUMS.txt
+            android/app/build/outputs/SIGNING-CERTIFICATE-SHA256.txt
           if-no-files-found: error
           retention-days: 7
