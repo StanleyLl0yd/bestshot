@@ -63,8 +63,8 @@ class ImageAnalyzer(private val context: Context) : AutoCloseable {
     private fun decodeScaled(uri: Uri): Bitmap {
         val resolver = context.contentResolver
         val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-        resolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, bounds) }
-            ?: throw IOException("Cannot open image")
+        val boundsStream = resolver.openInputStream(uri) ?: throw IOException("Cannot open image")
+        boundsStream.use { BitmapFactory.decodeStream(it, null, bounds) }
         if (bounds.outWidth <= 0 || bounds.outHeight <= 0) throw IOException("Unknown image format")
         var sample = 1
         while (max(bounds.outWidth, bounds.outHeight) / sample > 1400) sample *= 2
