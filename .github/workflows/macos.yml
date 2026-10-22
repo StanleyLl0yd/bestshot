@@ -1,0 +1,40 @@
+name: macOS
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  macos-arm64:
+    runs-on: xcode-27
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - name: Select stable Xcode 27.1
+        run: |
+          echo "DEVELOPER_DIR=/Applications/Xcode_27.1.app/Contents/Developer" >> "$GITHUB_ENV"
+          test -d /Applications/Xcode_27.1.app/Contents/Developer
+      - name: Verify Swift and Xcode
+        run: |
+          xcodebuild -version
+          swift --version
+      - name: Ranking unit tests
+        run: cd macos && swift test --parallel
+      - name: Build native app
+        run: |
+          xcodebuild -project macos/BestShot.xcodeproj -scheme BestShot -configuration Release \
+            -destination 'generic/platform=macOS' -derivedDataPath "$RUNNER_TEMP/DerivedData" \
+            CODE_SIGNING_ALLOWED=NO ARCHS=arm64 build
+      - name: Verify arm64-only executable
+        run: |
+          BIN="$RUNNER_TEMP/DerivedData/Build/Products/Release/BestShot.app/Contents/MacOS/BestShot"
+          file "$BIN"
+          test "$(lipo -archs "$BIN")" = "arm64"
+      - name: Verify no external package references
+        run: |
+          if grep -R 'XCRemoteSwiftPackageReference' macos/BestShot.xcodeproj; then exit 1; fi
+          ! grep -R 'com.apple.security.network.client' macos/BestShot/BestShot.entitlements

@@ -1,0 +1,46 @@
+name: Android
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - name: Set up JDK 25 LTS
+        uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6
+        with:
+          distribution: temurin
+          java-version: '25'
+      - name: Install Android SDK platform
+        run: |
+          yes | sdkmanager --licenses > /dev/null || true
+          sdkmanager 'platforms;android-37' 'build-tools;36.0.0'
+      - name: Set up Gradle 9.6.0
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          gradle-version: '9.6.0'
+          cache-read-only: true
+      - name: Verify Gradle toolchain
+        run: |
+          java -version
+          gradle --version
+      - name: Compile, test, lint and bundle
+        run: |
+          gradle -p android --no-daemon \
+            :app:assembleDebug :app:testDebugUnitTest :app:lintDebug :app:bundleRelease
+      - name: Verify release and privacy
+        run: |
+          APK="$(find android/app/build/outputs/apk/debug -name '*.apk' -type f | head -1)"
+          test -n "$APK"
+          test -n "$(find android/app/build/outputs/bundle/release -name '*.aab' -type f | head -1)"
+          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump permissions "$APK" > "$RUNNER_TEMP/permissions.txt"
+          ! grep -q 'android.permission.INTERNET' "$RUNNER_TEMP/permissions.txt"
+          ! grep -q 'android.permission.READ_MEDIA_IMAGES' "$RUNNER_TEMP/permissions.txt"

@@ -2,7 +2,6 @@ import Foundation
 import Vision
 import ImageIO
 import CoreGraphics
-import RankingCore
 
 struct PhotoAnalysis: Sendable {
     let sourceIndex: Int

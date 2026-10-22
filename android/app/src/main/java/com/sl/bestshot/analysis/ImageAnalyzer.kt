@@ -44,11 +44,11 @@ class ImageAnalyzer(private val context: Context) : AutoCloseable {
             }
             // Only use probabilities for one near-front-facing face.
             val face = faces.singleOrNull()
-            val eyeConfidence = if (face != null &&
-                abs(face.headEulerAngleY) <= 18 && abs(face.headEulerAngleZ) <= 18 &&
-                face.leftEyeOpenProbability != null && face.rightEyeOpenProbability != null
-            ) min(face.leftEyeOpenProbability.toDouble(), face.rightEyeOpenProbability.toDouble())
-            else null
+            val left = face?.leftEyeOpenProbability
+            val right = face?.rightEyeOpenProbability
+            val eyeConfidence = if (face != null && left != null && right != null &&
+                abs(face.headEulerAngleY) <= 18 && abs(face.headEulerAngleZ) <= 18
+            ) min(left.toDouble(), right.toDouble()) else null
             AnalyzedPhoto(uri, index,
                 PhotoSignals(index, sharpness, exposure, faces.size, eyesOpen = eyeConfidence), null)
         } catch (e: kotlinx.coroutines.CancellationException) {

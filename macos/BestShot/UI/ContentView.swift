@@ -2,7 +2,6 @@ import SwiftUI
 import AppKit
 import ImageIO
 import UniformTypeIdentifiers
-import RankingCore
 
 struct ContentView: View {
     @State private var urls: [URL] = []
