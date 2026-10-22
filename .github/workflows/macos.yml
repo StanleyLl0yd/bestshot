@@ -25,6 +25,10 @@ jobs:
         run: |
           xcodebuild -version
           swift --version
+      - name: QA manifest validation (not an AI accuracy test)
+        run: |
+          swift shared/test-cases/evaluate.swift shared/test-cases/example.json > "$RUNNER_TEMP/evaluation.txt"
+          grep -q 'Target NOT established' "$RUNNER_TEMP/evaluation.txt"
       - name: Ranking unit tests
         run: cd macos && swift test --parallel
       - name: Build native app

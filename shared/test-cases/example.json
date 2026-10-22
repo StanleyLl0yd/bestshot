@@ -1,0 +1,13 @@
+{
+  "series": [
+    {
+      "id": "synthetic-ranking-example-01",
+      "split": "holdout",
+      "category": "portrait",
+      "sourceKind": "synthetic",
+      "independentRaters": 0,
+      "ranking": [2, 0, 3, 1],
+      "humanBest": [2]
+    }
+  ]
+}

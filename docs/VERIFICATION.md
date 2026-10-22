@@ -1,11 +1,19 @@
-# Verification status (2026-10-22)
+# Verification register - BestShot (2026-10-22)
 
-- macOS Swift package tests: pending CI.
-- macOS Xcode 27.1 arm64 build: pending CI.
-- Apple Vision and file/drag/drop operation on real Apple Silicon: unverified.
-- Android unit/lint/build/release bundle: pending CI.
-- Bundled ML Kit without Google Play Services on real device: unverified.
-- Android 10 picker fallback, HEIF orientation and SAF export: unverified.
-- Independent top-3 human agreement: unmeasured (target >=85% on >=50 held-out photo bursts).
-- Standard Gradle wrapper JAR and checksum validation: pending; CI explicitly uses Gradle 9.6.0 via official action.
-- No release or store publication authorized.
+## Confirmed on exact-head b7f4f979b8fda24ed889eef938141882a49eea40
+
+- macOS GitHub Actions 39775941358: Swift tests, Xcode 27.1 Release build and arm64 architecture, external-package/no-network-entitlement checks PASS.
+- Android GitHub Actions 39775941289: Gradle build, unit tests, lint, debug APK, release AAB and manifest permission checks PASS.
+- All CI builds use unsigned artifacts and are not distributable production releases.
+
+## Still unverified
+
+- Real macOS SwiftUI drag-and-drop, photo selection and export on Apple Silicon.
+- macOS 14 compatibility and sandbox-scoped access on physical hardware.
+- Android 10 device fallback Photo Picker and original-quality SAF export on devices with/without Play Services.
+- UI accessibility, rotation, large fonts, cancellation during face analysis, and large-image memory under actual workload.
+- AI ranking accuracy on >=50 private, independent human-rated real series. None has been measured yet; see EVALUATION.md.
+- Official Gradle wrapper jar and wrapper checksum validation. CI currently selects pinned Gradle 9.6.0 using setup-gradle.
+- Main branch rulesets, push protection, Dependabot and security settings are not administratively verified by the connector.
+
+Do not publish or merge as final release on the strength of compilation alone.

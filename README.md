@@ -18,6 +18,6 @@ The official Android Gradle wrapper JAR is not yet committed.
 
 **Experimental prototypes, not 1.0 releases.** Relative scores are not accuracy percentages. AI recommendations have not yet been validated against independent human choices or real-device runs.
 
-Documentation: docs/ARCHITECTURE.md, docs/SCORING.md, docs/PRIVACY.md, docs/VERIFICATION.md.
+Documentation: docs/ARCHITECTURE.md, docs/SCORING.md, docs/EVALUATION.md, docs/PRIVACY.md, docs/VERIFICATION.md.
 
 No license has been selected. All rights reserved until approval. No GitHub release or store publication authorized.
