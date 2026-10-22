@@ -106,8 +106,10 @@ private fun BestShotScreen(vm: BestShotViewModel = viewModel()) {
                 OutlinedButton(onClick = { compare = true }, enabled = state.ranking.size >= 2) {
                     Text(tr("Сравнить", "Compare"))
                 }
-                Button(onClick = { export.launch(null) }, enabled = state.selected.isNotEmpty()) {
-                    Text(tr("Экспорт", "Export"))
+                Button(onClick = { export.launch(null) },
+                    enabled = state.selected.isNotEmpty() && !state.exporting && !state.processing) {
+                    Text(if (state.exporting) tr("Экспорт...", "Exporting...")
+                         else tr("Экспорт", "Export"))
                 }
             }
             LazyVerticalGrid(columns = GridCells.Adaptive(150.dp),

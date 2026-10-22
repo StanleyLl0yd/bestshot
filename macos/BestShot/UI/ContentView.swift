@@ -10,6 +10,7 @@ struct ContentView: View {
     @State private var selected: Set<Int> = []
     @State private var active: Task<Void, Never>?
     @State private var processed = 0
+    @State private var analysisGeneration: UInt64 = 0
     @State private var alert: String?
     @State private var compare = false
     @State private var compareLeft = 0
@@ -183,13 +184,15 @@ struct ContentView: View {
             alert = L.text("Выберите от 2 до 30 разных фотографий.", "Select 2-30 distinct photos.")
             return
         }
+        active?.cancel()
+        analysisGeneration &+= 1
+        let ticket = analysisGeneration
         urls = unique; processed = 0; results = []; ranked = []; selected = []
         compareLeft = 0; compareRight = 1; compareZoom = 1
-        active?.cancel()
         active = Task {
             var output: [PhotoAnalysis] = []
             for (index, url) in unique.enumerated() {
-                if Task.isCancelled { break }
+                if Task.isCancelled || ticket != analysisGeneration { break }
                 let analysisTask = Task.detached(priority: .userInitiated) {
                     PhotoAnalyzer.analyze(url, index: index)
                 }
@@ -198,11 +201,11 @@ struct ContentView: View {
                 } onCancel: {
                     analysisTask.cancel()
                 }
-                if Task.isCancelled { break }
+                if Task.isCancelled || ticket != analysisGeneration { break }
                 output.append(item)
                 processed += 1
             }
-            if !Task.isCancelled {
+            if !Task.isCancelled && ticket == analysisGeneration {
                 results = output
                 ranked = Ranker.rank(output.compactMap(\.signals))
                 selected = Set(ranked.prefix(3).map(\.sourceIndex))
@@ -211,7 +214,7 @@ struct ContentView: View {
                                    "Fewer than two images could be analyzed.")
                 }
             }
-            active = nil
+            if ticket == analysisGeneration { active = nil }
         }
     }
 

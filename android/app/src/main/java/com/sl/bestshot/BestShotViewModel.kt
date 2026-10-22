@@ -27,6 +27,7 @@ data class ScreenState(
     val ranking: List<RankedPhoto> = emptyList(),
     val progress: Int = 0,
     val processing: Boolean = false,
+    val exporting: Boolean = false,
     val selected: Set<Int> = emptySet(),
     val message: String? = null
 )
@@ -96,12 +97,14 @@ class BestShotViewModel(app: Application) : AndroidViewModel(app) {
     fun export(directory: Uri) {
         val snapshot = mutable.value
         val indices = snapshot.selected.sorted()
-        if (indices.isEmpty()) return
+        if (indices.isEmpty() || snapshot.exporting || snapshot.processing) return
+        mutable.value = snapshot.copy(exporting = true)
         // Export belongs to the selection that existed at launch. Do not show
         // an old export result on a newly selected photo series.
         val exportGeneration = generation
         viewModelScope.launch {
-            val outcome = withContext(Dispatchers.IO) {
+            val outcome = try {
+                withContext(Dispatchers.IO) {
                 val resolver = getApplication<Application>().contentResolver
                 val folder = DocumentFile.fromTreeUri(getApplication(), directory)
                     ?: return@withContext "Cannot access selected directory"
@@ -131,9 +134,14 @@ class BestShotViewModel(app: Application) : AndroidViewModel(app) {
                     }
                 }
                 "Exported " + saved + " original-quality copies"
+                }
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (error: Exception) {
+                error.message ?: "Cannot export selected photos"
             }
             if (exportGeneration == generation) {
-                mutable.value = mutable.value.copy(message = outcome)
+                mutable.value = mutable.value.copy(exporting = false, message = outcome)
             }
         }
     }
