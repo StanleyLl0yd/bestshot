@@ -1,0 +1,6 @@
+# BestShot signing request marker
+
+Changing this nonsecret file on protected main can request one signed Android candidate.
+Do not put a keystore, alias, password, certificate, personal path or photo metadata here.
+
+Request state: inactive

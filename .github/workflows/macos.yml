@@ -1,0 +1,62 @@
+name: macOS
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+permissions:
+  contents: read
+jobs:
+  macos-arm64:
+    runs-on: xcode-27
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Verify exact checked-out commit
+        env:
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+      - name: Select stable Xcode 27.1
+        run: |
+          echo "DEVELOPER_DIR=/Applications/Xcode_27.1.app/Contents/Developer" >> "$GITHUB_ENV"
+          test -d /Applications/Xcode_27.1.app/Contents/Developer
+      - name: Verify Swift and Xcode
+        run: |
+          xcodebuild -version
+          swift --version
+      - name: QA manifest validation (not an AI accuracy test)
+        run: |
+          swift shared/test-cases/evaluate.swift shared/test-cases/example.json > "$RUNNER_TEMP/evaluation.txt"
+          grep -q 'Target NOT established' "$RUNNER_TEMP/evaluation.txt"
+      - name: Ranking unit tests
+        run: cd macos && swift test --parallel
+      - name: Build native app
+        run: |
+          xcodebuild -project macos/BestShot.xcodeproj -scheme BestShot -configuration Release \
+            -destination 'generic/platform=macOS' -derivedDataPath "$RUNNER_TEMP/DerivedData" \
+            CODE_SIGNING_ALLOWED=NO ARCHS=arm64 build
+      - name: Verify arm64-only executable
+        run: |
+          BIN="$RUNNER_TEMP/DerivedData/Build/Products/Release/BestShot.app/Contents/MacOS/BestShot"
+          file "$BIN"
+          test "$(lipo -archs "$BIN")" = "arm64"
+      - name: Verify no external package references
+        run: |
+          if grep -R 'XCRemoteSwiftPackageReference' macos/BestShot.xcodeproj; then exit 1; fi
+          ! grep -R 'com.apple.security.network.client' macos/BestShot/BestShot.entitlements
+      - name: Package unsigned macOS testing app
+        run: |
+          ditto -c -k --sequesterRsrc --keepParent             "$RUNNER_TEMP/DerivedData/Build/Products/Release/BestShot.app"             "$RUNNER_TEMP/BestShot-macOS-arm64-unsigned.zip"
+      - name: Upload unsigned macOS testing app
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: BestShot-macOS-arm64-unsigned
+          path: ${{ runner.temp }}/BestShot-macOS-arm64-unsigned.zip
+          if-no-files-found: error
+          retention-days: 14

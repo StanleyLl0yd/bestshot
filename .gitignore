@@ -1,0 +1,21 @@
+# Apple
+.DS_Store
+**/.build/
+**/DerivedData/
+**/*.xcuserstate
+**/xcuserdata/
+*.app
+# Android
+.gradle/
+.idea/
+local.properties
+**/build/
+*.apk
+*.aab
+*.jks
+*.keystore
+# Secrets/photos
+.env
+*.p12
+*.mobileprovision
+private-fixtures/
