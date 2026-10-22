@@ -25,7 +25,8 @@ function Select-BestShotKeystore {
     param([string]$RequestedPath)
 
     if (-not [string]::IsNullOrWhiteSpace($RequestedPath)) {
-        $chosen = Get-Item -LiteralPath $RequestedPath.Trim().Trim('"') -ErrorAction Stop
+        $cleanPath = $RequestedPath.Trim().Trim('"')
+        $chosen = Get-Item -LiteralPath $cleanPath -ErrorAction Stop
         if ($chosen -isnot [IO.FileInfo]) { throw 'The supplied keystore path is not a file.' }
         if ($chosen.Extension -notin @('.jks', '.keystore', '.p12', '.pfx')) {
             throw 'Expected a .jks, .keystore, .p12 or .pfx file.'
@@ -70,7 +71,7 @@ function Select-BestShotKeystore {
     if ([string]::IsNullOrWhiteSpace($entered)) {
         throw 'No keystore selected. No signing secret was uploaded.'
     }
-    return Select-BestShotKeystore -RequestedPath $entered
+    return (Select-BestShotKeystore -RequestedPath $entered)
 }
 
 function Set-BestShotSecret {
