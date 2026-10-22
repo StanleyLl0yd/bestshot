@@ -41,6 +41,7 @@ enum PhotoAnalyzer {
             } catch {
                 faces = []
             }
+            try Task.checkCancellation()
             let metrics = ImageMetrics.measure(image)
             let singleQuality = faces.count == 1 ? faces.first?.faceCaptureQuality.map(Double.init) : nil
             return PhotoAnalysis(sourceIndex: index, url: url,

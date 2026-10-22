@@ -41,10 +41,18 @@ class ImageAnalyzer(private val context: Context) : AutoCloseable {
             val (sharpness, exposure) = measure(pixels)
             // Wait for the detector to finish even if cancellation arrives, so its
             // InputImage never refers to a recycled Bitmap.
-            val faces = suspendCoroutine<List<Face>> { continuation ->
-                detector.process(InputImage.fromBitmap(pixels, 0))
-                    .addOnSuccessListener { continuation.resume(it) }
-                    .addOnFailureListener { continuation.resumeWithException(it) }
+            var detectorWarning: String? = null
+            val faces = try {
+                suspendCoroutine<List<Face>> { continuation ->
+                    detector.process(InputImage.fromBitmap(pixels, 0))
+                        .addOnSuccessListener { continuation.resume(it) }
+                        .addOnFailureListener { continuation.resumeWithException(it) }
+                }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                detectorWarning = "Face detection unavailable: " + (e.message ?: "unknown error")
+                emptyList()
             }
             // Only use probabilities for one near-front-facing face.
             val face = faces.singleOrNull()
@@ -54,7 +62,9 @@ class ImageAnalyzer(private val context: Context) : AutoCloseable {
                 abs(face.headEulerAngleY) <= 18 && abs(face.headEulerAngleZ) <= 18
             ) min(left.toDouble(), right.toDouble()) else null
             AnalyzedPhoto(uri, index,
-                PhotoSignals(index, sharpness, exposure, faces.size, eyesOpen = eyeConfidence), null)
+                PhotoSignals(index, sharpness, exposure, faces.size,
+                    eyesOpen = eyeConfidence, faceDetectionFailed = detectorWarning != null),
+                detectorWarning)
         } catch (e: kotlinx.coroutines.CancellationException) {
             throw e
         } catch (e: Exception) {

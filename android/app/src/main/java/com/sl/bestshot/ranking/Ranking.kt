@@ -9,7 +9,8 @@ data class PhotoSignals(
     val exposurePenalty: Double,
     val faceCount: Int,
     val faceQuality: Double? = null,
-    val eyesOpen: Double? = null
+    val eyesOpen: Double? = null,
+    val faceDetectionFailed: Boolean = false
 )
 
 data class RankedPhoto(
@@ -32,7 +33,8 @@ object Ranking {
         val transformed = valid.map { ln(1 + it.sharpness) }
         val low = transformed.min()
         val high = transformed.max()
-        val varyingCounts = valid.map { it.faceCount }.distinct().size > 1
+        val varyingCounts = valid.filterNot { it.faceDetectionFailed }.map { it.faceCount }.distinct().size > 1
+        val detectorFailed = valid.any { it.faceDetectionFailed }
         val scored = valid.map { item ->
             val s = if (high - low < 0.0001) 0.5 else (ln(1 + item.sharpness) - low) / (high - low)
             val technical = 0.70 * s + 0.30 * (1 - item.exposurePenalty)
@@ -43,10 +45,11 @@ object Ranking {
                 if (s > 0.7) add("sharp")
                 if (item.exposurePenalty < 0.18) add("exposure")
                 if (eyes != null) add("eye-signal")
-                if (item.faceCount == 0) add("no-faces")
+                if (item.faceCount == 0 && !item.faceDetectionFailed) add("no-faces")
+                if (item.faceDetectionFailed) add("face-detector-unavailable")
                 if (varyingCounts) add("face-count-varies")
             }
-            RankedPhoto(item.index, score.coerceIn(0.0, 1.0), notes, varyingCounts)
+            RankedPhoto(item.index, score.coerceIn(0.0, 1.0), notes, varyingCounts || detectorFailed)
         }.sortedWith(compareByDescending<RankedPhoto> { it.score }.thenBy { it.index })
         val nearTie = scored.size >= 2 && abs(scored[0].score - scored[1].score) < 0.055
         return scored.map { it.copy(uncertain = it.uncertain || nearTie) }

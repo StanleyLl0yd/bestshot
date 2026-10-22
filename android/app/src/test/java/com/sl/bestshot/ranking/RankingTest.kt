@@ -33,4 +33,16 @@ class RankingTest {
         ))
         assertEquals(scores[0].score, scores[1].score, .000001)
     }
+    @Test fun detectorFailurePreservesTechnicalRankingAndSignalsUncertainty() {
+        val ranked = Ranking.rank(listOf(
+            PhotoSignals(0, 4.0, .15, 0, faceDetectionFailed = true),
+            PhotoSignals(1, 5.0, .25, 1)
+        ))
+        assertEquals(2, ranked.size)
+        assertTrue(ranked.all { it.uncertain })
+        val fallback = ranked.first { it.index == 0 }
+        assertTrue(fallback.reasons.contains("face-detector-unavailable"))
+        assertFalse(fallback.reasons.contains("no-faces"))
+    }
+
 }

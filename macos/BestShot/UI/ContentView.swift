@@ -180,9 +180,14 @@ struct ContentView: View {
             var output: [PhotoAnalysis] = []
             for (index, url) in unique.enumerated() {
                 if Task.isCancelled { break }
-                let item = await Task.detached(priority: .userInitiated) {
+                let analysisTask = Task.detached(priority: .userInitiated) {
                     PhotoAnalyzer.analyze(url, index: index)
-                }.value
+                }
+                let item = await withTaskCancellationHandler {
+                    await analysisTask.value
+                } onCancel: {
+                    analysisTask.cancel()
+                }
                 if Task.isCancelled { break }
                 output.append(item)
                 processed += 1

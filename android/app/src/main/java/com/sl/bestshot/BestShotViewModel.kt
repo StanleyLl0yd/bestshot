@@ -48,7 +48,14 @@ class BestShotViewModel(app: Application) : AndroidViewModel(app) {
         mutable.value = ScreenState(source = unique, processing = true)
         job = viewModelScope.launch {
             val output = mutableListOf<AnalyzedPhoto>()
-            ImageAnalyzer(getApplication()).use { analyzer ->
+            val analyzer = try {
+                ImageAnalyzer(getApplication())
+            } catch (e: Exception) {
+                if (ticket == generation) mutable.value = mutable.value.copy(
+                    processing = false, message = e.message ?: "Cannot initialize face detector")
+                return@launch
+            }
+            analyzer.use { analyzer ->
                 try {
                     unique.forEachIndexed { index, uri ->
                         kotlinx.coroutines.currentCoroutineContext().ensureActive()

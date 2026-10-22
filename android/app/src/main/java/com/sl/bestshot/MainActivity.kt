@@ -95,7 +95,7 @@ private fun BestShotScreen(vm: BestShotViewModel = viewModel()) {
                 }
             }
             val failed = state.results.count { it.error != null }
-            if (failed > 0) Text(tr("Не обработано: ", "Unreadable: ") + failed)
+            if (failed > 0) Text(tr("Файлов с предупреждениями: ", "Files with warnings: ") + failed)
             LazyVerticalGrid(columns = GridCells.Adaptive(150.dp),
                 contentPadding = PaddingValues(top = 12.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -118,6 +118,7 @@ private fun BestShotScreen(vm: BestShotViewModel = viewModel()) {
                                     "eye-signal" -> tr("Глаза, вероятно, открыты", "Eyes likely open")
                                     "face-count-varies" -> tr("Число лиц различается", "Face counts differ")
                                     "no-faces" -> tr("Без обнаруженных лиц", "No faces found")
+                                    "face-detector-unavailable" -> tr("Оценены технические показатели без AI", "Technical-only analysis")
                                     else -> it
                                 }
                             }, style = MaterialTheme.typography.bodySmall)
