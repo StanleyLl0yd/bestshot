@@ -11,8 +11,7 @@ Two independent, native offline photo-series selectors in one repository.
 ## Build and test
 
 macOS: open macos/BestShot.xcodeproj in Xcode 27.1. Swift ranking tests: run swift test from macos directory.
-Android: JDK 25 / AGP 9.4 / Gradle 9.6.0. Run gradle -p android :app:assembleDebug :app:testDebugUnitTest :app:lintDebug :app:bundleRelease.
-The official Android Gradle wrapper JAR is not yet committed.
+Android: JDK 25 / AGP 9.4 / Gradle 9.6.0. From android/, run ./gradlew :app:assembleDebug :app:testDebugUnitTest :app:lintDebug :app:bundleRelease (or gradlew.bat on Windows). Official Gradle 9.6.0 wrapper scripts and JAR are committed, the distribution is pinned by SHA-256. These Gradle files retain their own Apache-2.0 licensing notices; this project still has no selected license.
 
 ## Status
 

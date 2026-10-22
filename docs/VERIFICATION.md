@@ -13,7 +13,7 @@
 - Android 10 device fallback Photo Picker and original-quality SAF export on devices with/without Play Services.
 - UI accessibility, rotation, large fonts, cancellation during face analysis, and large-image memory under actual workload.
 - AI ranking accuracy on >=50 private, independent human-rated real series. None has been measured yet; see EVALUATION.md.
-- Official Gradle wrapper jar and wrapper checksum validation. CI currently selects pinned Gradle 9.6.0 using setup-gradle.
+- Official Gradle wrapper JAR and scripts have been added from upstream Gradle v9.6.0; exact-head CI wrapper-validation and distribution download are pending.
 - Main branch rulesets, push protection, Dependabot and security settings are not administratively verified by the connector.
 
 Do not publish or merge as final release on the strength of compilation alone.
