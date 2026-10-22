@@ -20,9 +20,9 @@ Check secret names under Settings -> Environments -> bestshot-android-signing ->
 
 ## Signed candidate build
 
-After this workflow is reviewed and merged into main, use Actions -> Android signed candidates -> Run workflow -> main.
+After this workflow is reviewed and merged into main, use Actions -> Android signed candidates -> Run workflow -> main. Alternatively, a reviewed PR may change only `.github/signed-build-request.txt`; merging that PR on protected main triggers one signed candidate build, without ChatGPT receiving the private key. The signing job waits for successful Android and macOS CI on the exact `main` commit (up to 15 minutes); it fails closed on failure, timeout or a moving branch.
 
-Only manual dispatch on main uses Environment Secrets. The workflow temporarily writes the signing keystore with permissions 0600, signs release APK and AAB, verifies their signatures and calculates SHA-256 checksums, then deletes the temporary keystore on the runner.
+Only a manual dispatch or an inert signing-request marker changed on main uses Environment Secrets. The workflow temporarily writes the signing keystore with permissions 0600, signs release APK and AAB, verifies their signatures and calculates SHA-256 checksums, then deletes the temporary keystore on the runner.
 
 Signed output is a GitHub Actions artifact retained for seven days, not a published GitHub Release or store submission. Public repository workflow artifacts may be downloadable: the artifact contains only APK/AAB and checksums, never private keys/passwords.
 

@@ -97,6 +97,9 @@ class BestShotViewModel(app: Application) : AndroidViewModel(app) {
         val snapshot = mutable.value
         val indices = snapshot.selected.sorted()
         if (indices.isEmpty()) return
+        // Export belongs to the selection that existed at launch. Do not show
+        // an old export result on a newly selected photo series.
+        val exportGeneration = generation
         viewModelScope.launch {
             val outcome = withContext(Dispatchers.IO) {
                 val resolver = getApplication<Application>().contentResolver
@@ -129,7 +132,9 @@ class BestShotViewModel(app: Application) : AndroidViewModel(app) {
                 }
                 "Exported " + saved + " original-quality copies"
             }
-            mutable.value = mutable.value.copy(message = outcome)
+            if (exportGeneration == generation) {
+                mutable.value = mutable.value.copy(message = outcome)
+            }
         }
     }
 

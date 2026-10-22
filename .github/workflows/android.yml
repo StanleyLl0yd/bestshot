@@ -76,3 +76,28 @@ jobs:
             android/app/build/outputs/bundle/release/*.aab
           if-no-files-found: error
           retention-days: 14
+      - name: Smoke-test release signing with disposable CI-only key
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          temp="$(mktemp -d "$RUNNER_TEMP/bestshot-ci-signing-XXXXXXXX")"
+          trap 'rm -rf "$temp"' EXIT
+          keytool -genkeypair -noprompt -keyalg RSA -keysize 2048 -validity 1 \
+            -alias ci-only -dname 'CN=BestShot Ephemeral CI' \
+            -keystore "$temp/ci.jks" \
+            -storepass 'BestShotSmokeOnly123' -keypass 'BestShotSmokeOnly123'
+          export BESTSHOT_SIGNING_STORE_FILE="$temp/ci.jks"
+          export BESTSHOT_SIGNING_STORE_PASSWORD='BestShotSmokeOnly123'
+          export BESTSHOT_SIGNING_KEY_ALIAS='ci-only'
+          export BESTSHOT_SIGNING_KEY_PASSWORD='BestShotSmokeOnly123'
+          (cd android && ./gradlew --no-daemon :app:assembleRelease :app:bundleRelease)
+          apk='android/app/build/outputs/apk/release/app-release.apk'
+          aab='android/app/build/outputs/bundle/release/app-release.aab'
+          test -s "$apk" && test -s "$aab"
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose "$apk"
+          jarsigner -verify "$aab" > "$temp/aab-check.txt"
+          grep -Fq 'jar verified' "$temp/aab-check.txt"
+          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$apk" |
+            grep -Fq "name='com.sl.bestshot'"
+          # Disposable CI-signed files are never uploaded as artifacts.
