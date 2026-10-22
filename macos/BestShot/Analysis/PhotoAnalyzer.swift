@@ -12,6 +12,8 @@ struct PhotoAnalysis: Sendable {
 
 enum PhotoAnalyzer {
     static func analyze(_ url: URL, index: Int) -> PhotoAnalysis {
+        let scoped = url.startAccessingSecurityScopedResource()
+        defer { if scoped { url.stopAccessingSecurityScopedResource() } }
         do {
             try Task.checkCancellation()
             guard let source = CGImageSourceCreateWithURL(url as CFURL, nil),

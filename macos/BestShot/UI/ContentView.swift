@@ -83,15 +83,23 @@ struct ContentView: View {
         }
         .padding(20)
         .onDrop(of: [UTType.fileURL], isTargeted: nil) { providers in
-            for provider in providers {
+            guard !running, !providers.isEmpty else { return false }
+            let group = DispatchGroup()
+            let collector = FileDropCollector()
+            for (index, provider) in providers.enumerated() {
+                group.enter()
                 _ = provider.loadObject(ofClass: URL.self) { url, _ in
-                    guard let url else { return }
-                    Task { @MainActor in
-                        if !running { start(urls: self.urls + [url]) }
-                    }
+                    if let url { collector.append(url, index: index) }
+                    group.leave()
                 }
             }
-            return !providers.isEmpty
+            // A multi-file drop is ONE selection, not separate one-photo requests.
+            group.notify(queue: .main) {
+                Task { @MainActor in
+                    start(urls: collector.snapshot())
+                }
+            }
+            return true
         }
         .sheet(isPresented: $compare) {
             HStack(spacing: 8) {
@@ -209,5 +217,22 @@ private struct PreviewImage: View {
                 Image(systemName: "photo.badge.exclamationmark").resizable().scaledToFit()
             }
         }.frame(maxWidth: .infinity, minHeight: size, maxHeight: size)
+    }
+}
+
+private final class FileDropCollector: @unchecked Sendable {
+    private let lock = NSLock()
+    private var items: [(Int, URL)] = []
+
+    func append(_ url: URL, index: Int) {
+        lock.lock()
+        items.append((index, url))
+        lock.unlock()
+    }
+
+    func snapshot() -> [URL] {
+        lock.lock()
+        defer { lock.unlock() }
+        return items.sorted { $0.0 < $1.0 }.map(\.1)
     }
 }
