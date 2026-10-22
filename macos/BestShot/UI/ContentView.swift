@@ -12,6 +12,9 @@ struct ContentView: View {
     @State private var processed = 0
     @State private var alert: String?
     @State private var compare = false
+    @State private var compareLeft = 0
+    @State private var compareRight = 1
+    @State private var compareZoom = 1.0
 
     private var running: Bool { active != nil }
     var body: some View {
@@ -102,12 +105,39 @@ struct ContentView: View {
             return true
         }
         .sheet(isPresented: $compare) {
-            HStack(spacing: 8) {
-                if ranked.count >= 2 {
-                    PreviewImage(url: urls[ranked[0].sourceIndex], size: 500)
-                    PreviewImage(url: urls[ranked[1].sourceIndex], size: 500)
+            VStack(spacing: 12) {
+                HStack {
+                    Picker(L.text("Левый кадр", "Left photo"), selection: $compareLeft) {
+                        ForEach(0..<ranked.count, id: \.self) { i in
+                            Text("#\(i + 1) \(urls[ranked[i].sourceIndex].lastPathComponent)").tag(i)
+                        }
+                    }
+                    Picker(L.text("Правый кадр", "Right photo"), selection: $compareRight) {
+                        ForEach(0..<ranked.count, id: \.self) { i in
+                            Text("#\(i + 1) \(urls[ranked[i].sourceIndex].lastPathComponent)").tag(i)
+                        }
+                    }
                 }
-            }.padding().frame(minWidth: 900, minHeight: 530)
+                HStack(spacing: 8) {
+                    if ranked.count >= 2 {
+                        ScrollView([.horizontal, .vertical]) {
+                            PreviewImage(url: urls[ranked[compareLeft].sourceIndex],
+                                         size: CGFloat(440 * compareZoom))
+                        }.frame(maxWidth: .infinity, maxHeight: .infinity)
+                        ScrollView([.horizontal, .vertical]) {
+                            PreviewImage(url: urls[ranked[compareRight].sourceIndex],
+                                         size: CGFloat(440 * compareZoom))
+                        }.frame(maxWidth: .infinity, maxHeight: .infinity)
+                    }
+                }
+                HStack {
+                    Text(L.text("Масштаб", "Zoom"))
+                    Slider(value: $compareZoom, in: 1...3, step: 0.25).frame(width: 250)
+                    Text("\(Int(compareZoom * 100))%").monospacedDigit()
+                    Spacer()
+                    Button(L.text("Закрыть", "Close")) { compare = false }
+                }
+            }.padding().frame(minWidth: 970, minHeight: 610)
         }
         .alert(L.text("BestShot", "BestShot"), isPresented: Binding(
             get: { alert != nil }, set: { if !$0 { alert = nil } }
@@ -144,6 +174,7 @@ struct ContentView: View {
             return
         }
         urls = unique; processed = 0; results = []; ranked = []; selected = []
+        compareLeft = 0; compareRight = 1; compareZoom = 1
         active?.cancel()
         active = Task {
             var output: [PhotoAnalysis] = []
@@ -175,9 +206,13 @@ struct ContentView: View {
         panel.canChooseFiles = false
         panel.canCreateDirectories = true
         guard panel.runModal() == .OK, let directory = panel.url else { return }
+        let folderAccess = directory.startAccessingSecurityScopedResource()
+        defer { if folderAccess { directory.stopAccessingSecurityScopedResource() } }
         var count = 0
         for index in selected.sorted() {
             let source = urls[index]
+            let sourceAccess = source.startAccessingSecurityScopedResource()
+            defer { if sourceAccess { source.stopAccessingSecurityScopedResource() } }
             let ext = source.pathExtension
             let stem = source.deletingPathExtension().lastPathComponent
             var destination = directory.appendingPathComponent(source.lastPathComponent)
@@ -203,14 +238,20 @@ struct ContentView: View {
 private struct PreviewImage: View {
     let url: URL
     let size: CGFloat
+    private var thumbnail: CGImage? {
+        let scoped = url.startAccessingSecurityScopedResource()
+        defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+        guard let source = CGImageSourceCreateWithURL(url as CFURL, nil) else { return nil }
+        return CGImageSourceCreateThumbnailAtIndex(source, 0, [
+            kCGImageSourceCreateThumbnailFromImageAlways: true,
+            kCGImageSourceCreateThumbnailWithTransform: true,
+            kCGImageSourceThumbnailMaxPixelSize: Int(size * 2)
+        ] as CFDictionary)
+    }
+
     var body: some View {
         Group {
-            if let source = CGImageSourceCreateWithURL(url as CFURL, nil),
-               let thumbnail = CGImageSourceCreateThumbnailAtIndex(source, 0, [
-                    kCGImageSourceCreateThumbnailFromImageAlways: true,
-                    kCGImageSourceCreateThumbnailWithTransform: true,
-                    kCGImageSourceThumbnailMaxPixelSize: Int(size * 2)
-               ] as CFDictionary) {
+            if let thumbnail {
                 Image(decorative: thumbnail, scale: 1)
                     .resizable().scaledToFit()
             } else {
