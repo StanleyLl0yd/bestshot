@@ -4,6 +4,21 @@ plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.plugin.compose")
 }
+// Optional CI signing; no credentials in VCS. Without all credentials release is unsigned.
+val requiredSigningVars = listOf(
+    "BESTSHOT_SIGNING_STORE_FILE",
+    "BESTSHOT_SIGNING_STORE_PASSWORD",
+    "BESTSHOT_SIGNING_KEY_ALIAS",
+    "BESTSHOT_SIGNING_KEY_PASSWORD"
+)
+val signingVars = requiredSigningVars.associateWith { providers.environmentVariable(it).orNull }
+val signingRequested = signingVars.values.any { !it.isNullOrEmpty() }
+if (signingRequested) {
+    require(signingVars.values.all { !it.isNullOrEmpty() }) {
+        "Incomplete release signing environment: all four BESTSHOT_SIGNING_* values required"
+    }
+}
+
 android {
     namespace = "com.sl.bestshot"
     compileSdk = 37
@@ -16,8 +31,23 @@ android {
         versionName = "0.1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
+    signingConfigs {
+        if (signingRequested) {
+            create("bestshotRelease") {
+                storeFile = file(signingVars.getValue("BESTSHOT_SIGNING_STORE_FILE")!!)
+                storePassword = signingVars.getValue("BESTSHOT_SIGNING_STORE_PASSWORD")
+                keyAlias = signingVars.getValue("BESTSHOT_SIGNING_KEY_ALIAS")
+                keyPassword = signingVars.getValue("BESTSHOT_SIGNING_KEY_PASSWORD")
+            }
+        }
+    }
     buildTypes {
-        release { isMinifyEnabled = false }
+        release {
+            isMinifyEnabled = false
+            if (signingRequested) {
+                signingConfig = signingConfigs.getByName("bestshotRelease")
+            }
+        }
     }
     buildFeatures { compose = true }
     compileOptions {
