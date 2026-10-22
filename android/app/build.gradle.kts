@@ -7,6 +7,7 @@ plugins {
 android {
     namespace = "com.sl.bestshot"
     compileSdk = 37
+    compileSdkMinor = 0 // API 37 is published as android-37.0
     defaultConfig {
         applicationId = "com.sl.bestshot"
         minSdk = 29
