@@ -19,7 +19,9 @@ import kotlin.coroutines.resumeWithException
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
-import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import kotlin.coroutines.suspendCoroutine
 
 data class AnalyzedPhoto(val uri: Uri, val index: Int, val signals: PhotoSignals?, val error: String?)
 
@@ -31,16 +33,18 @@ class ImageAnalyzer(private val context: Context) : AutoCloseable {
             .build()
     )
 
-    suspend fun analyze(uri: Uri, index: Int): AnalyzedPhoto {
+    suspend fun analyze(uri: Uri, index: Int): AnalyzedPhoto = withContext(Dispatchers.Default) {
         var bitmap: Bitmap? = null
-        return try {
+        try {
             bitmap = decodeScaled(uri)
             val pixels = bitmap ?: throw IOException("Cannot decode image")
             val (sharpness, exposure) = measure(pixels)
-            val faces = suspendCancellableCoroutine<List<Face>> { continuation ->
+            // Wait for the detector to finish even if cancellation arrives, so its
+            // InputImage never refers to a recycled Bitmap.
+            val faces = suspendCoroutine<List<Face>> { continuation ->
                 detector.process(InputImage.fromBitmap(pixels, 0))
-                    .addOnSuccessListener { if (continuation.isActive) continuation.resume(it) }
-                    .addOnFailureListener { if (continuation.isActive) continuation.resumeWithException(it) }
+                    .addOnSuccessListener { continuation.resume(it) }
+                    .addOnFailureListener { continuation.resumeWithException(it) }
             }
             // Only use probabilities for one near-front-facing face.
             val face = faces.singleOrNull()

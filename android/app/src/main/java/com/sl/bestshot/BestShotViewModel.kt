@@ -35,6 +35,7 @@ class BestShotViewModel(app: Application) : AndroidViewModel(app) {
     private val mutable = MutableStateFlow(ScreenState())
     val state = mutable.asStateFlow()
     private var job: Job? = null
+    private var generation: Long = 0L
 
     fun start(uris: List<Uri>) {
         val unique = uris.distinct()
@@ -42,6 +43,7 @@ class BestShotViewModel(app: Application) : AndroidViewModel(app) {
             mutable.value = mutable.value.copy(message = "Выберите 2-30 разных фотографий / Choose 2-30 photos")
             return
         }
+        val ticket = ++generation
         job?.cancel()
         mutable.value = ScreenState(source = unique, processing = true)
         job = viewModelScope.launch {
@@ -51,10 +53,10 @@ class BestShotViewModel(app: Application) : AndroidViewModel(app) {
                     unique.forEachIndexed { index, uri ->
                         kotlinx.coroutines.currentCoroutineContext().ensureActive()
                         output += analyzer.analyze(uri, index)
-                        mutable.value = mutable.value.copy(progress = index + 1)
+                        if (ticket == generation) mutable.value = mutable.value.copy(progress = index + 1)
                     }
                     val ranking = Ranking.rank(output.mapNotNull { it.signals })
-                    mutable.value = mutable.value.copy(
+                    if (ticket == generation) mutable.value = mutable.value.copy(
                         results = output,
                         ranking = ranking,
                         selected = ranking.take(3).map { it.index }.toSet(),
@@ -62,15 +64,18 @@ class BestShotViewModel(app: Application) : AndroidViewModel(app) {
                         message = if (ranking.size < 2) "Недостаточно фотографий / Too few readable images" else null
                     )
                 } catch (_: CancellationException) {
-                    mutable.value = mutable.value.copy(processing = false, message = "Анализ отменён / Cancelled")
+                    if (ticket == generation) mutable.value = mutable.value.copy(processing = false, message = "Анализ отменён / Cancelled")
                 } catch (e: Exception) {
-                    mutable.value = mutable.value.copy(processing = false, message = e.message)
+                    if (ticket == generation) mutable.value = mutable.value.copy(processing = false, message = e.message)
                 }
             }
         }
     }
 
-    fun cancel() { job?.cancel() }
+    fun cancel() {
+        job?.cancel()
+        mutable.value = mutable.value.copy(processing = false, message = "Анализ отменён / Cancelled")
+    }
     fun select(index: Int, checked: Boolean) {
         val old = mutable.value.selected
         mutable.value = mutable.value.copy(selected = if (checked) old + index else old - index)
@@ -78,7 +83,8 @@ class BestShotViewModel(app: Application) : AndroidViewModel(app) {
     fun dismissMessage() { mutable.value = mutable.value.copy(message = null) }
 
     fun export(directory: Uri) {
-        val indices = mutable.value.selected.sorted()
+        val snapshot = mutable.value
+        val indices = snapshot.selected.sorted()
         if (indices.isEmpty()) return
         viewModelScope.launch {
             val outcome = withContext(Dispatchers.IO) {
@@ -87,7 +93,7 @@ class BestShotViewModel(app: Application) : AndroidViewModel(app) {
                     ?: return@withContext "Cannot access selected directory"
                 var saved = 0
                 for (index in indices) {
-                    val uri = mutable.value.source.getOrNull(index) ?: continue
+                    val uri = snapshot.source.getOrNull(index) ?: continue
                     var name = displayName(resolver, uri, index)
                     val dot = name.lastIndexOf('.')
                     val stem = if (dot > 0) name.substring(0, dot) else name
