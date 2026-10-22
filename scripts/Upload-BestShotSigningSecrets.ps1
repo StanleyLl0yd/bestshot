@@ -142,13 +142,13 @@ if ($LASTEXITCODE -ne 0 -or -not $envInfo.deployment_branch_policy.custom_branch
     throw 'The signing environment does not enforce custom branch restrictions.'
 }
 $policyEndpoint = "$endpoint/deployment-branch-policies"
-$policies = (& $gh api "$policyEndpoint?per_page=100") | ConvertFrom-Json
+$policies = (& $gh api ($policyEndpoint + '?per_page=100')) | ConvertFrom-Json
 if ($LASTEXITCODE -ne 0) { throw 'Cannot read deployment branch policies.' }
 if ($policies.total_count -eq 0) {
     & $gh api --method POST $policyEndpoint -f name=main -f type=branch --silent
     if ($LASTEXITCODE -ne 0) { throw 'Cannot restrict the environment to main.' }
 }
-$policies = (& $gh api "$policyEndpoint?per_page=100") | ConvertFrom-Json
+$policies = (& $gh api ($policyEndpoint + '?per_page=100')) | ConvertFrom-Json
 if ($LASTEXITCODE -ne 0 -or $policies.total_count -ne 1 -or
     $policies.branch_policies[0].name -cne 'main' -or
     $policies.branch_policies[0].type -ne 'branch') {
