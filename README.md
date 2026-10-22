@@ -22,3 +22,5 @@ Testing artifacts: GitHub Actions retains a debug Android APK, unsigned release 
 Documentation: docs/ARCHITECTURE.md, docs/SCORING.md, docs/EVALUATION.md, docs/PRIVACY.md, docs/VERIFICATION.md.
 
 No license has been selected. All rights reserved until approval. No GitHub release or store publication authorized.
+
+Android signing is optional and main-only. See [Android signing instructions](docs/ANDROID_SIGNING.md).
