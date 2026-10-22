@@ -1,0 +1,81 @@
+name: Android signed candidates
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+concurrency:
+  group: bestshot-android-signed-candidate
+  cancel-in-progress: false
+jobs:
+  sign:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6
+        with:
+          distribution: temurin
+          java-version: '25'
+      - uses: android-actions/setup-android@9fc6c4e9069bf8d3d10b2204b1fb8f6ef7065407 # v3
+        with:
+          packages: 'platform-tools'
+      - name: Android SDK 37.0
+        run: |
+          set -euo pipefail
+          yes | sdkmanager --licenses > /dev/null || true
+          sdkmanager --channel=3 'platforms;android-37.0' 'build-tools;36.0.0'
+      - uses: gradle/actions/wrapper-validation@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6
+        with:
+          min-wrapper-count: '1'
+      - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6
+        with:
+          cache-read-only: true
+      - name: Sign, verify, and discard temporary keystore
+        shell: bash
+        env:
+          KEYSTORE_BASE64: '${{ secrets.BESTSHOT_ANDROID_KEYSTORE_BASE64 }}'
+          STORE_PASSWORD_SECRET: '${{ secrets.BESTSHOT_ANDROID_STORE_PASSWORD }}'
+          KEY_ALIAS_SECRET: '${{ secrets.BESTSHOT_ANDROID_KEY_ALIAS }}'
+          KEY_PASSWORD_SECRET: '${{ secrets.BESTSHOT_ANDROID_KEY_PASSWORD }}'
+        run: |
+          set -euo pipefail
+          umask 077
+          if [[ -z "$KEYSTORE_BASE64" || -z "$STORE_PASSWORD_SECRET" || -z "$KEY_ALIAS_SECRET" || -z "$KEY_PASSWORD_SECRET" ]]; then
+            echo "::error::One or more Android signing secrets are missing"
+            exit 1
+          fi
+          key_directory="$(mktemp -d "$RUNNER_TEMP/bestshot-key-XXXXXXXX")"
+          trap 'rm -rf "$key_directory"' EXIT
+          export BESTSHOT_SIGNING_STORE_FILE="$key_directory/release.jks"
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$BESTSHOT_SIGNING_STORE_FILE"
+          test -s "$BESTSHOT_SIGNING_STORE_FILE"
+          chmod 600 "$BESTSHOT_SIGNING_STORE_FILE"
+          export BESTSHOT_SIGNING_STORE_PASSWORD="$STORE_PASSWORD_SECRET"
+          export BESTSHOT_SIGNING_KEY_ALIAS="$KEY_ALIAS_SECRET"
+          export BESTSHOT_SIGNING_KEY_PASSWORD="$KEY_PASSWORD_SECRET"
+          (cd android && ./gradlew --no-daemon --console=plain :app:bundleRelease :app:assembleRelease)
+          aab='android/app/build/outputs/bundle/release/app-release.aab'
+          apk='android/app/build/outputs/apk/release/app-release.apk'
+          test -s "$aab" && test -s "$apk"
+          jarsigner -verify -verbose "$aab" > "$RUNNER_TEMP/aab-verification.txt"
+          grep -q 'jar verified.' "$RUNNER_TEMP/aab-verification.txt"
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose "$apk" \
+            > "$RUNNER_TEMP/apk-verification.txt"
+          (
+            cd android/app/build/outputs
+            sha256sum bundle/release/app-release.aab apk/release/app-release.apk > SIGNED-SHA256SUMS.txt
+          )
+      - name: Store signed candidate artifacts for 7 days
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: bestshot-android-signed-${{ github.sha }}
+          path: |
+            android/app/build/outputs/bundle/release/app-release.aab
+            android/app/build/outputs/apk/release/app-release.apk
+            android/app/build/outputs/SIGNED-SHA256SUMS.txt
+          if-no-files-found: error
+          retention-days: 7
