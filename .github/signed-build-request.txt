@@ -7,3 +7,8 @@ Request state: test signed Android candidate after certificate-fingerprint and p
 Requested: 2026-10-22
 Publication authorized: no
 Store upload authorized: no
+
+Retry request: 2026-10-23 after offline Android release permission fix
+Expected safeguards: exact-main CI, package identity, no network/media permissions, signer SHA-256, APK/AAB checksums
+Previous signed attempt: #39920978148 failed closed before artifact publication
+Publication authorized: no
