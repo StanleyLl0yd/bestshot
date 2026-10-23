@@ -45,3 +45,7 @@ Use GitHub Actions -> Android signed candidates -> the latest successful run -> 
 On Windows with GitHub CLI, list runs with `gh run list -R StanleyLl0yd/bestshot --workflow android-signed.yml --branch main --limit 5` and download a selected one using `gh run download RUN_ID -R StanleyLl0yd/bestshot --dir "$HOME\\Downloads\\BestShot-candidate"`.
 
 A debug APK and a release-signed APK have different certificates, so installing the release candidate over an installed debug build may require uninstalling the debug build first. Preserve data you need before uninstalling. No RuStore or Google Play submission is part of this workflow.
+
+## Windows downloader and checksum verification
+
+The local-only PowerShell 7 helper `scripts/Get-BestShotAndroidCandidate.ps1` selects the latest successful Android signed candidates run, downloads its signed APK/AAB artifact from GitHub Actions to a new Downloads subfolder, verifies both recorded SHA-256 hashes and displays the public signer fingerprint (if present). It never reads signing keys, asks for passwords or publishes anything. Review and run it locally using `pwsh -NoProfile -File .\Get-BestShotAndroidCandidate.ps1`. It refuses to overwrite an existing directory. SHA-256 verification is not a substitute for signature validation (performed in the signing workflow).
