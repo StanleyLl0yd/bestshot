@@ -24,3 +24,9 @@ Documentation: docs/ARCHITECTURE.md, docs/SCORING.md, docs/EVALUATION.md, docs/P
 No license has been selected. All rights reserved until approval. No GitHub release or store publication authorized.
 
 Android signing is optional and main-only. See [Android signing instructions](docs/ANDROID_SIGNING.md).
+
+## Verified signed Android test candidate (23 October 2026)
+
+[GitHub Actions signed run #39924789727](https://github.com/StanleyLl0yd/bestshot/actions/runs/39924789727) built APK/AAB using encrypted owner-managed Environment Secrets and passed cryptographic signature verification, expected package `com.sl.bestshot`, no `INTERNET`, `ACCESS_NETWORK_STATE`, or `READ_MEDIA_IMAGES` permission, and SHA-256 checksum publication. The artifact expires on 30 October 2026. Use `scripts/Get-BestShotAndroidCandidate.ps1` on a trusted Windows machine with PowerShell 7 + GitHub CLI to download the latest successful candidate and check its SHA-256 values.
+
+**Do not use the earlier signed run #39787153261 (22 October)**: the release-only network permission issue was not yet identified or fixed. It is superseded. The signed APK/AAB is strictly for testing; physical device acceptance, human ranking quality evaluation and all store approvals remain open.

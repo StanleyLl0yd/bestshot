@@ -49,3 +49,7 @@ A debug APK and a release-signed APK have different certificates, so installing 
 ## Windows downloader and checksum verification
 
 The local-only PowerShell 7 helper `scripts/Get-BestShotAndroidCandidate.ps1` selects the latest successful Android signed candidates run, downloads its signed APK/AAB artifact from GitHub Actions to a new Downloads subfolder, verifies both recorded SHA-256 hashes and displays the public signer fingerprint (if present). It never reads signing keys, asks for passwords or publishes anything. Review and run it locally using `pwsh -NoProfile -File .\Get-BestShotAndroidCandidate.ps1`. It refuses to overwrite an existing directory. SHA-256 verification is not a substitute for signature validation (performed in the signing workflow).
+
+## Superseded signed artifact warning
+
+Do not install or distribute the 22 October signed candidate from Actions run `39787153261`: later release-manifest checks found unwanted network permissions in that release. Use 23 October successful signing run `39924789727` (or a more recent run that passes all release privacy gates) instead. The improved signed workflow fails closed before artifact upload if any network permission is present.
