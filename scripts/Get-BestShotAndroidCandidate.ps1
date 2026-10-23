@@ -17,7 +17,7 @@ if ($LASTEXITCODE -ne 0) { throw 'Run gh auth login first.' }
 
 $json = & $gh run list -R $repo --workflow android-signed.yml --branch main --limit 50 --json databaseId,headSha,status,conclusion
 if ($LASTEXITCODE -ne 0) { throw 'Cannot read signed build history.' }
-$runs = @($json | ConvertFrom-Json)
+$runs = @(($json -join [Environment]::NewLine) | ConvertFrom-Json)
 $chosen = $runs | Where-Object {
     $_.status -eq 'completed' -and $_.conclusion -eq 'success' -and
     $_.headSha -match '^[0-9a-fA-F]{40}$'
