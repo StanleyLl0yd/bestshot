@@ -65,6 +65,7 @@ jobs:
           test -n "$(find android/app/build/outputs/bundle/release -name '*.aab' -type f | head -1)"
           "$ANDROID_HOME/build-tools/36.0.0/aapt" dump permissions "$APK" > "$RUNNER_TEMP/permissions.txt"
           ! grep -q 'android.permission.INTERNET' "$RUNNER_TEMP/permissions.txt"
+          ! grep -q 'android.permission.ACCESS_NETWORK_STATE' "$RUNNER_TEMP/permissions.txt"
           ! grep -q 'android.permission.READ_MEDIA_IMAGES' "$RUNNER_TEMP/permissions.txt"
           "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$APK" | grep -q "sdkVersion:'29'"
       - name: Upload Android debug APK and unsigned release bundle
@@ -100,4 +101,14 @@ jobs:
           grep -Fq 'jar verified' "$temp/aab-check.txt"
           "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$apk" |
             grep -Fq "name='com.sl.bestshot'"
+          # Diagnose the actual merged permissions on a *release* APK.
+          # Print only permission names, never the signing key.
+          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump permissions "$apk" \
+            > "$temp/release-permissions.txt"
+          echo "Release APK declared permission entries:"
+          grep '^uses-permission' "$temp/release-permissions.txt" || true
+          if grep -E "^uses-permission[^:]*: name='android\.permission\.(INTERNET|ACCESS_NETWORK_STATE|READ_MEDIA_IMAGES)'" "$temp/release-permissions.txt"; then
+            echo "::error::Release APK unexpectedly declares INTERNET or READ_MEDIA_IMAGES"
+            exit 1
+          fi
           # Disposable CI-signed files are never uploaded as artifacts.
