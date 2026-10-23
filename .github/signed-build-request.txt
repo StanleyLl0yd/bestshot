@@ -3,4 +3,7 @@
 Changing this nonsecret file on protected main can request one signed Android candidate.
 Do not put a keystore, alias, password, certificate, personal path or photo metadata here.
 
-Request state: inactive
+Request state: test signed Android candidate after certificate-fingerprint and permission audit
+Requested: 2026-10-22
+Publication authorized: no
+Store upload authorized: no
