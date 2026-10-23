@@ -111,7 +111,7 @@ jobs:
             > "$RUNNER_TEMP/apk-permissions.txt"
           # Only match actual uses-permission declarations, never arbitrary text
           # inside aapt's package/application metadata.
-          if grep -E "^uses-permission[^:]*: name='android\.permission\.(INTERNET|READ_MEDIA_IMAGES)'" "$RUNNER_TEMP/apk-permissions.txt"; then
+          if grep -E "^uses-permission[^:]*: name='android\.permission\.(INTERNET|ACCESS_NETWORK_STATE|READ_MEDIA_IMAGES)'" "$RUNNER_TEMP/apk-permissions.txt"; then
             echo "::error::Unexpected network or broad media permission"; exit 1
           fi
           digest="$(sed -n 's/^Signer #1 certificate SHA-256 digest: //p' "$RUNNER_TEMP/apk-verification.txt")"
